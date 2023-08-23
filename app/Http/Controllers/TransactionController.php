@@ -2,38 +2,63 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Dompdf\Dompdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Validator;
 
 class TransactionController extends Controller
 {
-    public function index()
+    public function transaction()
     {
+        // get data
+        $transactions = Transaction::get();
+        $debitAmount = Transaction::where('type','debit')->sum('amount');
+        $creditAmount = Transaction::where('type','credit')->sum('amount');
+        $balanceAmount=$creditAmount-$debitAmount;
 
-        $transactions = DB::table('transactions')->get();
-        $balance = DB::table('transactions')->sum('amount');
+        // return
+        return view('transactions.transaction',compact('transactions','balanceAmount'));
+    }
 
-        $pdf = new Dompdf();
+    public function createTransaction(Request $request)
+    {
+        // validate
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required',
+            'transactionType' => 'required',
+        ]);
 
-        // Generate the PDF content
-        $pdfContent = View::make('transactions.pdf', compact('transactions', 'balance'))->render();
-        $pdf->loadHtml($pdfContent);
+        if (!$validator->passes()) {
+            // not valid
+            return back()->with('dangerMsg', "Some required fields missing");
+        } else {
 
-        // (Optional) Set paper size and orientation
-        $pdf->setPaper('A4', 'portrait');
+            // valid
+            $amount = $request->amount;
+            $transactionType = $request->transactionType;
 
-        // Render the PDF
-        $pdf->render();
+            // save to database
+            $transaction = new Transaction();
+            $transaction->amount = $amount;
+            $transaction->type = $transactionType;
 
-        return view('transactions.index', compact('transactions', 'balance'));
+            $transaction->save();
+
+            // return
+            return back()->with('status', "Transaction added success");
+        }
     }
 
     public function pdf()
     {
+        // get data
         $transactions = DB::table('transactions')->get();
-        $balance = DB::table('transactions')->sum('amount');
+        $debitAmount = Transaction::where('type','debit')->sum('amount');
+        $creditAmount = Transaction::where('type','credit')->sum('amount');
+        $balance=number_format($creditAmount-$debitAmount,2);
 
         $pdf = new Dompdf();
 

@@ -14,5 +14,11 @@ use App\Http\Controllers\TransactionController;
 |
 */
 
-Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
+// index
+Route::get('/', [TransactionController::class, 'transaction']);
+
+// create transaction
+Route::post('create-transaction', [TransactionController::class, 'createTransaction']);
+
+// PDF
 Route::get('transactions/pdf', [TransactionController::class, 'pdf'])->name('transactions.pdf');
